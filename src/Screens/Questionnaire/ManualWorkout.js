@@ -1,3 +1,4 @@
+import { validExerciseDetails } from "../../utils/workoutData";
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -215,6 +216,7 @@ const ManualWorkout = () => {
   };
 
   const handleAddExercise = () => {
+    if (!validExerciseDetails(newExercise)) { Toast.show({type:'error',text1:'Check sets, reps and rest time',text2:'Use positive sets/reps and a rest time between 0 and 3600 seconds.'}); return; }
     if (!newExercise.name.trim()) {
       Toast.show({
         type: "error",
@@ -310,9 +312,9 @@ const ManualWorkout = () => {
   };
 
   const handleSaveWorkout = async () => {
+    if (saving) return;
     // Validation
-    const totalExercises = Object.values(workoutPlan.daily_workouts)
-      .flat()
+    const totalExercises = workoutPlan.weekly_split.flatMap(label => workoutPlan.daily_workouts[label.split(":")[0].trim()] || [])
       .length;
     
     if (totalExercises === 0) {
@@ -324,11 +326,12 @@ const ManualWorkout = () => {
       return;
     }
 
+    setSaving(true);
     // Safety check (Step 4): manually-typed exercises never went through the
     // generated-plan engine's equipment/injury filtering, so before saving
     // we ask the backend to check any exercise that matches a known catalog
     // entry by name against the user's saved equipment and reported
-    // limitations (see functions/src/functions/validateWorkoutPlan.ts).
+    // limitations in the dedicated workout server.
     // This is fail-open by design: if the check itself can't be reached
     // (offline, etc.) we warn but still allow the save, since this is an
     // additive safety layer on top of existing behavior, not a hard
@@ -337,6 +340,7 @@ const ManualWorkout = () => {
       const validation = await callValidateWorkoutPlan(workoutPlan.daily_workouts);
       const { valid, errors } = validation || {};
       if (valid === false && Array.isArray(errors) && errors.length > 0) {
+        setSaving(false);
         Toast.show({
           type: "error",
           text1: "Please review this workout",
@@ -364,6 +368,9 @@ const ManualWorkout = () => {
         goal: workoutPlan.goal,
         generatedAt: new Date().toISOString(),
         source: "Manual Creation",
+        planId: `manual-${Date.now()}`,
+        weekNumber: 1,
+        daily_workouts: Object.fromEntries(workoutPlan.weekly_split.map(label => { const key=label.split(":")[0].trim(); return [key,workoutPlan.daily_workouts[key] || []]; })),
       };
 
       // Remove weeklyWorkoutDays from final plan
@@ -374,9 +381,7 @@ const ManualWorkout = () => {
         .doc(uid)
         .set({
           weekStart: firestore.Timestamp.fromDate(weekStart),
-          nextPlanDue: firestore.Timestamp.fromDate(
-            new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-          ),
+          nextPlanDue: null,
           plan: finalPlan,
           createdAt: firestore.FieldValue.serverTimestamp(),
           source: "Manual",

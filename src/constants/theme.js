@@ -21,7 +21,7 @@ export const Colors = {
   background: "#141516",
   primary: "#F34E3A",
   white: "white",
-  grey: "#3656565",
+  grey: "#656565",
    secondary: '#7B68EE',
   accent: '#FF6B6B',
    surface: '#1A1A1A',

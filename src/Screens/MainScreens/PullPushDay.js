@@ -1,3 +1,4 @@
+import { localDateKey } from "../../utils/workoutData";
 import React, { useState } from "react";
 import {
   View,
@@ -44,9 +45,10 @@ const darkColors = {
 const PullPushDay = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { day, label, exercises } = route.params;
+  const { day, label, exercises: routeExercises = [] } = route.params || {};
   const dispatch = useDispatch();
   const workoutPlan = useSelector((state) => state.workout.workoutPlan);
+  const exercises = workoutPlan?.daily_workouts?.[day] || routeExercises;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [exerciseToDelete, setExerciseToDelete] = useState(null);
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -110,7 +112,7 @@ const PullPushDay = () => {
 
       const currentPlan = doc.data().plan;
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateKey();
       const workoutData = {
         planId: currentPlan?.planId || null,
         planVersion: currentPlan?.schemaVersion || 1,

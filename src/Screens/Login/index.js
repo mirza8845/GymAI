@@ -18,28 +18,28 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const validationSchema = yup.object({
-    email: yup.string().email("Invalid email").required("Email is required"),
+    email: yup.string().trim().email("Invalid email").required("Email is required"),
     password: yup.string().required("Password is required"),
   });
 
   const handleSignIn = async (values) => {
     setLoading(true);
     try {
-      await auth().signInWithEmailAndPassword(values.email, values.password);
+      await auth().signInWithEmailAndPassword(values.email.trim().toLowerCase(), values.password);
       await AsyncStorage.setItem("email", values.email.toLowerCase());
-      await AsyncStorage.setItem("password", values.password);
+      await AsyncStorage.removeItem("password");
       Toast.show({
         type: "success",
         text1: "Sign In",
         text2: "Logged in successfully!",
       });
-      navigation.navigate("Tabs");
+      navigation.reset({ index: 0, routes: [{ name: "Decider" }] });
     } catch (error) {
       console.log("Sign In Error:", error);
       Toast.show({
         type: "error",
         text1: "Sign In Failed",
-        text2: "Invalid credentials",
+        text2: error.code === "auth/network-request-failed" ? "Check your internet connection and try again." : error.code === "auth/too-many-requests" ? "Too many attempts. Please try again later." : "Email or password is incorrect.",
       });
     } finally {
       setLoading(false);

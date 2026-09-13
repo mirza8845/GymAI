@@ -14,7 +14,7 @@ import {
   View,
   ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   SafeAreaView,
   SafeAreaProvider,
@@ -187,10 +187,10 @@ const Home = () => {
     }
   }, [dispatch]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchWorkoutPlan();
     checkPlanExpiry();
-  }, [fetchWorkoutPlan, checkPlanExpiry]);
+  }, [fetchWorkoutPlan, checkPlanExpiry]));
 
   useEffect(() => {
     if (!loading && planExpired) {

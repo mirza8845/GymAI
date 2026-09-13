@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { exerciseDetails, validExerciseDetails } from "../../utils/workoutData";
 import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import firestore from "@react-native-firebase/firestore";
 import auth from "@react-native-firebase/auth";
@@ -11,38 +12,38 @@ import { setWorkoutPlan } from "../../redux/Actions";
 import { useDispatch, useSelector } from "react-redux";
 
 const EditRoutineScreen = ({ route, navigation }) => {
-  const { dayKey, dayLabel, exercises } = route.params;
-  const [editedExercises, setEditedExercises] = useState(exercises);
+  const { dayKey, dayLabel, exercises = [] } = route.params || {};
+  const [editedExercises, setEditedExercises] = useState(() => exercises.map(ex => ({ ...ex, workoutDetails: { ...exerciseDetails(ex) } })));
   const [showAll, setShowAll] = useState(false); // Toggle for showing more
   const dispatch = useDispatch();
   const workoutPlan = useSelector((state) => state.workout.workoutPlan);
 
   const updateExerciseField = (index, field, value) => {
-    const updated = [...editedExercises];
-    updated[index][field] = value;
-    setEditedExercises(updated);
+    setEditedExercises(previous => previous.map((exercise, i) => i !== index ? exercise :
+      ['sets','reps','restSeconds'].includes(field)
+        ? { ...exercise, workoutDetails: { ...exercise.workoutDetails, [field]: value } }
+        : { ...exercise, [field]: value }));
   };
 
   const handleSave = async () => {
+    if (!dayKey || editedExercises.some(ex => !ex.name?.trim() || !validExerciseDetails(ex.workoutDetails))) {
+      Toast.show({type:'error',text1:'Check each exercise',text2:'Enter a name, positive sets/reps and valid rest time.'}); return;
+    }
+    const savedExercises = editedExercises.map(ex => ({...ex,name:ex.name.trim(),workoutDetails:{...ex.workoutDetails,sets:Number(ex.workoutDetails.sets)}}));
     try {
       const uid = auth().currentUser.uid;
 
       await firestore()
         .collection("workouts")
         .doc(uid)
-        .set(
-          {
-            [`plan.daily_workouts.${dayKey}`]: editedExercises,
-          },
-          { merge: true }
-        );
+        .update({ [`plan.daily_workouts.${dayKey}`]: savedExercises });
 
       // Update local Redux state
       const updatedPlan = {
         ...workoutPlan,
         daily_workouts: {
-          ...workoutPlan.daily_workouts,
-          [dayKey]: editedExercises,
+          ...workoutPlan?.daily_workouts,
+          [dayKey]: savedExercises,
         },
       };
       dispatch(setWorkoutPlan(updatedPlan));
@@ -85,15 +86,15 @@ const EditRoutineScreen = ({ route, navigation }) => {
           <Text style={styles.label}>Sets</Text>
           <TextInput
             style={styles.input}
-            value={exercise.sets.toString()}
-            onChangeText={(text) => updateExerciseField(index, "sets", parseInt(text))}
+            value={String(exercise.workoutDetails.sets)}
+            onChangeText={(text) => updateExerciseField(index, "sets", text)}
             placeholder="Sets"
             placeholderTextColor="#888"
             keyboardType="numeric"
           />
 
           <Text style={styles.label}>Reps</Text>
-          <TextInput style={styles.input} value={exercise.reps} onChangeText={(text) => updateExerciseField(index, "reps", text)} placeholder="Reps" placeholderTextColor="#888" />
+          <TextInput style={styles.input} value={String(exercise.workoutDetails.reps)} onChangeText={(text) => updateExerciseField(index, "reps", text)} placeholder="Reps" placeholderTextColor="#888" />
 
           <Text style={styles.label}>Equipment</Text>
           <TextInput style={styles.input} value={exercise.equipment} onChangeText={(text) => updateExerciseField(index, "equipment", text)} placeholder="Equipment" placeholderTextColor="#888" />

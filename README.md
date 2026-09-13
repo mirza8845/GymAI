@@ -1,97 +1,23 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# GymAI mobile app
 
-# Getting Started
+React Native 0.79 mobile app. Run `npm install`, then `npm start` and `npm run android` or `npm run ios`. On iOS, run the project's CocoaPods setup after changing native dependencies.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Backend and data flow
 
-## Step 1: Start Metro
+The public API origin is bundled through `src/config/workoutApi.js`: https://gym-ai-server.vercel.app. This is a plain React Native/Metro app, so it does not use Expo environment-variable injection. Change the public configuration and rebuild the app when changing the deployment origin. Never put service-account or provider keys in the app.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+`src/services/workoutApi.js` obtains the current Firebase Auth ID token and sends it as `Authorization: Bearer <token>`. Requests use raw JSON; successful responses contain `{ data: ... }`, failures `{ error: { code, message } }`. Existing screen error codes are preserved. Requests time out after 65 seconds.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- WorkoutGenerating → generation service → POST `/api/generateWorkoutPlan` with `{}`. Server reads the saved profile, builds and saves the current plan.
+- ManualWorkout → POST `/api/validateWorkoutPlan` with `{ dailyWorkouts }`. The existing screen then saves through Firestore; its existing allow-save-on-validation-network-error behavior is unchanged.
+- Home → POST `/api/checkWeeklyPlan` with `{}`. Server checks eligibility and performs weekly progression when due. This runs on app use, not on a schedule.
 
-```sh
-# Using npm
-npm start
+Firebase native initialization remains in the Android/iOS project configuration. Firebase Auth still handles signup, login, password reset and sessions. Firestore still handles profiles (`Users/{uid}`), current plan reads/edits (`workouts/{uid}`), custom sessions, workout/exercise history and weights (`users/{uid}/...`). Case-sensitive collection names and document shapes are unchanged. The dedicated server has no general CRUD endpoints; these existing direct Firestore operations remain necessary.
 
-# OR using Yarn
-yarn start
-```
+ExerciseDB browsing/local fallbacks and Cloudinary profile uploads remain independent of the workout API. No chat route is exposed in the current navigation.
 
-## Step 2: Build and run your app
+## Validation
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+`npm test -- --runInBand --watchman=false` runs mobile tests. The focused API contract suite is `__tests__/workoutApi.test.js`. The existing App render test needs navigation/native-module test setup. The existing lint script requires an ESLint configuration that was not present in this checkout.
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+The separate `gym-ai-server` repository owns the workout engine and deployment. See `MIGRATION_REPORT.md` for findings and release checks.

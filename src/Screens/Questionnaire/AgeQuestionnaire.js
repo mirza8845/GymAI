@@ -23,11 +23,11 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 const AgeQuestionnaire = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const ageOptions = Array.from({ length: 100 }, (_, i) => i + 1);
+  const ageOptions = Array.from({ length: 88 }, (_, i) => i + 13);
 
   const { userData, setUserData } = useContext(UserContext);
 
-  const [selectedAgeIndex, setSelectedAgeIndex] = useState(0);
+  const [selectedAgeIndex, setSelectedAgeIndex] = useState(5);
   const [selectedWeight, setSelectedWeight] = useState(0);
   const [unit, setUnit] = useState("kg");
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ const AgeQuestionnaire = () => {
   // Pre-fill values from context
   useEffect(() => {
     if (userData?.age) {
-      const index = ageOptions.findIndex((item) => item === userData.age);
+      const index = ageOptions.findIndex((item) => item === Number(userData.age));
       if (index !== -1) setSelectedAgeIndex(index);
     }
 

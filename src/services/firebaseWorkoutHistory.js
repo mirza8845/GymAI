@@ -1,3 +1,5 @@
+import { persistExercise, persistWorkout } from "./workoutPersistence";
+import { localDateKey } from "../utils/workoutData";
 // services/firebaseWorkoutHistory.js
 import firestore from "@react-native-firebase/firestore";
 import {
@@ -20,165 +22,9 @@ const exerciseWeightsCollection = (userId) =>
   firestore().collection("users").doc(userId).collection("exerciseWeights");
 
 export const WorkoutHistoryService = {
-  // Store completed single exercise
-  async logCompletedExercise(userId, exerciseData) {
-    try {
-      const timestamp = firestore.FieldValue.serverTimestamp();
-      const exerciseRef = exerciseHistoryCollection(userId).doc();
+  logCompletedExercise: persistExercise,
+  logCompletedWorkout: persistWorkout,
 
-      const exerciseLog = {
-        exerciseId: exerciseData.id,
-        name: exerciseData.name,
-        target: exerciseData.target,
-        bodyPart: exerciseData.bodyPart,
-        equipment: exerciseData.equipment,
-        sets: exerciseData.sets || 0,
-        reps: exerciseData.reps || 0,
-        targetReps: exerciseData.targetReps || "8-12",
-        weightUsed: exerciseData.weightUsed || 0,
-        restTime: exerciseData.restTime || 60,
-        duration: exerciseData.duration || 0,
-        calories: exerciseData.calories || 0,
-        difficulty: exerciseData.difficulty || 3,
-        rpe: exerciseData.rpe || null,
-        pain: exerciseData.pain || null,
-        painLevel: exerciseData.painLevel || null,
-        notes: exerciseData.notes || "",
-        workoutId: exerciseData.workoutId || null,
-        workoutDate:
-          exerciseData.workoutDate || new Date().toISOString().split("T")[0],
-        userId,
-        completedAt: timestamp,
-        type: "single",
-        date: new Date().toISOString().split("T")[0],
-        timestamp: new Date().getTime(),
-      };
-
-      await exerciseRef.set(exerciseLog);
-
-      // If weight was used, log it for progress tracking
-      if (exerciseData.weightUsed && exerciseData.weightUsed > 0) {
-        await this.logExerciseWeight(
-          userId,
-          exerciseData.id,
-          exerciseData.name,
-          exerciseData.weightUsed,
-          exerciseData.reps || 0,
-          exerciseData.date || new Date().toISOString(),
-        );
-      }
-
-      return {
-        success: true,
-        id: exerciseRef.id,
-        ...exerciseLog,
-      };
-    } catch (error) {
-      console.error("Error logging exercise:", error);
-      throw error;
-    }
-  },
-
-  // Store completed full workout
-  async logCompletedWorkout(userId, workoutData) {
-    try {
-      const timestamp = firestore.FieldValue.serverTimestamp();
-      const workoutRef = workoutHistoryCollection(userId).doc();
-
-      const totalSets =
-        workoutData.exercises?.reduce(
-          (total, ex) => total + (ex.sets || 0),
-          0,
-        ) || 0;
-      const totalReps =
-        workoutData.exercises?.reduce(
-          (total, ex) => total + (ex.reps || 0),
-          0,
-        ) || 0;
-
-      const totalWeight =
-        workoutData.exercises?.reduce(
-          (total, ex) => total + (ex.weightUsed || 0) * (ex.sets || 0),
-          0,
-        ) || 0;
-
-      const completedExercises =
-        workoutData.exercises?.filter((ex) => ex.completed && !ex.skipped).length || 0;
-      const skippedExercises =
-        workoutData.exercises?.filter((ex) => ex.skipped).length || 0;
-      const completionPercentage =
-        workoutData.totalExercises > 0
-          ? Math.round(
-              ((completedExercises + skippedExercises * 0.5) /
-                workoutData.totalExercises) *
-                100,
-            )
-          : 0;
-
-      const workoutLog = {
-        userId,
-        planId: workoutData.planId || null,
-        planVersion: workoutData.planVersion || null,
-        weekNumber: workoutData.weekNumber || null,
-        day: workoutData.day || "Workout",
-        warmup: workoutData.warmup?.length || 0,
-        cooldown: workoutData.cooldown?.length || 0,
-        exercises: workoutData.exercises || [],
-        totalExercises:
-          workoutData.totalExercises || workoutData.exercises?.length || 0,
-        completedExercises,
-        skippedExercises,
-        totalSets,
-        totalReps,
-        totalWeight: Math.round(totalWeight),
-        duration: workoutData.duration || 0,
-        caloriesBurned:
-          workoutData.caloriesBurned || Math.round(totalWeight * 0.05),
-        startTime: workoutData.startTime || new Date().toISOString(),
-        endTime: workoutData.endTime || new Date().toISOString(),
-        intensity:
-          workoutData.intensity || this.calculateIntensity(workoutData),
-        difficulty: workoutData.difficulty || 3,
-        completionStatus: workoutData.completionStatus || "completed",
-        completionPercentage,
-        prAchieved: workoutData.PRAchieved || false,
-        notes: workoutData.notes || "",
-        completedAt: timestamp,
-        type: "full",
-        date: workoutData.date || new Date().toISOString().split("T")[0],
-        timestamp: new Date().getTime(),
-      };
-
-      await workoutRef.set(workoutLog);
-
-      // Also log each exercise individually
-      if (workoutData.exercises && Array.isArray(workoutData.exercises)) {
-        const exercisePromises = workoutData.exercises.map(
-          (exercise, index) => {
-            return this.logCompletedExercise(userId, {
-              ...exercise,
-              workoutId: workoutRef.id,
-              workoutDate: workoutLog.date,
-              order: index + 1,
-            });
-          },
-        );
-
-        await Promise.all(exercisePromises);
-      }
-
-      return {
-        success: true,
-        id: workoutRef.id,
-        ...workoutLog,
-      };
-    } catch (error) {
-      console.error("Error logging workout:", error);
-      throw error;
-    }
-  },
-
-  // Calculate workout intensity
   calculateIntensity(workoutData) {
     if (!workoutData.duration || workoutData.duration === 0) return 3;
 
@@ -271,7 +117,7 @@ export const WorkoutHistoryService = {
   // Get today's completed workouts
   async getTodaysWorkouts(userId) {
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateKey();
       const snapshot = await workoutHistoryCollection(userId)
         .where("date", "==", today)
         .get();
@@ -311,7 +157,7 @@ export const WorkoutHistoryService = {
 
       // Calculate current streak
       let streak = 0;
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateKey();
       const yesterday = new Date(Date.now() - 86400000)
         .toISOString()
         .split("T")[0];
@@ -444,7 +290,7 @@ export const WorkoutHistoryService = {
     workouts.forEach((workout) => {
       if (workout.completedAt) {
         const date = workout.completedAt;
-        const dayName = format(date, "EEEE");
+        const dayName = format(date, "dddd");
         if (dayCount[dayName] !== undefined) {
           dayCount[dayName]++;
         }
@@ -579,7 +425,7 @@ export const WorkoutHistoryService = {
       const dailyData = {};
 
       daysInPeriod.forEach((day) => {
-        const dateKey = format(day, "yyyy-MM-dd");
+        const dateKey = format(day, "YYYY-MM-DD");
         dailyData[dateKey] = {
           date: dateKey,
           workouts: 0,
@@ -760,7 +606,7 @@ export const WorkoutHistoryService = {
             : 0;
 
         weeklyProgress.push({
-          week: format(weekStart, "MMM dd"),
+          week: format(weekStart, "MMM DD"),
           maxWeight: weekMax,
           entries: weekEntries.length,
         });
@@ -783,7 +629,7 @@ export const WorkoutHistoryService = {
             : 0;
 
         monthlyProgress.push({
-          month: format(monthStart, "MMM yyyy"),
+          month: format(monthStart, "MMM YYYY"),
           maxWeight: monthMax,
           entries: monthEntries.length,
         });
@@ -916,7 +762,7 @@ export const WorkoutHistoryService = {
   async getWorkoutSummary(userId, date) {
     try {
       const dateString =
-        typeof date === "string" ? date : format(date, "yyyy-MM-dd");
+        typeof date === "string" ? date : format(date, "YYYY-MM-DD");
 
       const snapshot = await workoutHistoryCollection(userId)
         .where("date", "==", dateString)
@@ -1008,7 +854,7 @@ export const WorkoutHistoryService = {
 
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month - 1, day);
-        const dateKey = format(date, "yyyy-MM-dd");
+        const dateKey = format(date, "YYYY-MM-DD");
 
         const dayWorkouts = workouts.filter((w) => w.date === dateKey);
 
@@ -1191,7 +1037,7 @@ export const WorkoutHistoryService = {
         notes: workoutData.notes || "Workout skipped",
         completedAt: timestamp,
         type: "full",
-        date: workoutData.date || new Date().toISOString().split("T")[0],
+        date: workoutData.date || localDateKey(),
         timestamp: new Date().getTime(),
       };
 

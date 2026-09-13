@@ -108,7 +108,7 @@ const HelpScreen = () => {
       title: "Email Support",
       description: "Get help via email",
       icon: <Ionicons name="mail" size={24} color="#3b82f6" />,
-      action: () => Linking.openURL("mailto:jazzy.tech007@gmail.com"),
+      action: () => Linking.openURL("mailto:jazzy.tech007@gmail.com").catch(() => Alert.alert("Email unavailable", "Set up an email app and try again.")),
       color: "#3b82f6",
     },
     {
@@ -129,7 +129,7 @@ const HelpScreen = () => {
       title: "Phone Support",
       description: "Call us for immediate help",
       icon: <Ionicons name="call" size={24} color={darkColors.primary} />,
-      action: () => Linking.openURL("tel:" + helperPhoneNumber),
+      action: () => Linking.openURL("tel:" + helperPhoneNumber).catch(() => Alert.alert("Phone unavailable", "This device cannot start a phone call.")),
       color: darkColors.primary,
     },
   ];
@@ -178,8 +178,8 @@ const HelpScreen = () => {
       setShowMessageModal(false);
       setMessageText("");
       Alert.alert(
-        "Message Sent!",
-        `Your message has been sent via ${selectedMessageType.toUpperCase()}. Our helper will respond shortly.`,
+        "Message draft opened",
+        `Review and send your message in ${selectedMessageType.toUpperCase()}.`,
         [{ text: "OK" }]
       );
     }, 1000);
@@ -266,7 +266,7 @@ Submitted from GymAI App
 
       Alert.alert(
         "Success!",
-        "Your feature suggestion has been sent. Thank you for helping us improve!",
+        "Your email draft is ready. Review and send it in your email app.",
         [{ text: "OK" }],
       );
     } catch (error) {
@@ -319,7 +319,7 @@ Submitted from GymAI App
 
       Alert.alert(
         "Thank You!",
-        "Your feedback has been sent. We appreciate your input!",
+        "Your email draft is ready. Review and send it in your email app.",
         [{ text: "OK" }],
       );
     } catch (error) {

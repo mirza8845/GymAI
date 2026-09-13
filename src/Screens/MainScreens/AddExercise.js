@@ -1,3 +1,4 @@
+import { validExerciseDetails } from "../../utils/workoutData";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -51,7 +52,7 @@ const darkColors = {
 const AddExercise = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { day } = route.params;
+  const { day } = route.params || {};
   const dispatch = useDispatch();
   const workoutPlan = useSelector((state) => state.workout.workoutPlan);
 
@@ -322,7 +323,7 @@ const AddExercise = () => {
         
         // Apply additional filtering if multiple filters are selected
         let finalResults = formattedResults;
-        if (selectedBodyPart !== "All" && selectedEquipment !== "All" && selectedTarget !== "All") {
+        if (selectedBodyPart !== "All" || selectedEquipment !== "All" || selectedTarget !== "All") {
           finalResults = formattedResults.filter(ex => {
             const matchesBodyPart = selectedBodyPart === "All" || 
               ex.bodyPart.toLowerCase().includes(selectedBodyPart.toLowerCase()) ||
@@ -403,6 +404,7 @@ const AddExercise = () => {
   };
 
   const confirmAddExercise = async () => {
+    if (!validExerciseDetails({sets,reps,restSeconds})) { Toast.show({type:'error',text1:'Check sets, reps and rest time',text2:'Use positive sets/reps and a rest time between 0 and 3600 seconds.'}); return; }
     if (!selectedExercise) return;
 
     try {

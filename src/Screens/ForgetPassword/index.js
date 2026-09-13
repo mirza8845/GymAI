@@ -25,13 +25,13 @@ const ForgetPassword = () => {
     if (values.email) {
       setLoading(true);
       try {
-        await auth().sendPasswordResetEmail(values.email);
+        await auth().sendPasswordResetEmail(values.email.trim().toLowerCase());
         Toast.show({
           type: "success",
           text1: "Success",
           text2: "Reset password link sent to your email.",
         });
-        navigation.navigate("login");
+        navigation.goBack();
       } catch (error) {
         Toast.show({
           type: "error",
@@ -62,7 +62,7 @@ const ForgetPassword = () => {
           <View style={styles.innerContainer}>
             <View style={{ marginTop: RFPercentage(13) }}>
               <Heading title="Reset Password" />
-              <Text style={{ color: "white", fontFamily: Fonts.Montserrat_SemiBold, textAlign: "center", marginTop: 10 }}>Reset Password link is sent to your email!</Text>
+              <Text style={{ color: "white", fontFamily: Fonts.Montserrat_SemiBold, textAlign: "center", marginTop: 10 }}>Enter your email to receive a password reset link.</Text>
             </View>
 
             <Formik initialValues={{ email: "" }} validationSchema={validationSchema} onSubmit={handleNext}>

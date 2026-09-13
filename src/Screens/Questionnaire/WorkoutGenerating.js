@@ -87,7 +87,7 @@ console.log("userdata.........",userData)
       setStatusMessage("Analyzing your profile...");
 
       // Generate the workout plan. This now calls the `generateWorkoutPlan`
-      // Cloud Function, which reads the saved questionnaire profile
+      // Vercel endpoint, which reads the saved questionnaire profile
       // server-side and both builds AND saves the plan to
       // `workouts/{uid}` itself — there is no separate client-side
       // Firestore write anymore (previously this screen wrote the plan

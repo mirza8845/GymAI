@@ -1,53 +1,7 @@
 import axios from "axios";
-// NOTE: a dead `import { GROQ_API_KEY } from "../config/keys"` used to live here.
-// It was never referenced anywhere else in this file (plan generation does not
-// call any LLM — see GymAI_Workout_Engine_Audit.md §2), and "../config/keys"
-// does not exist in this repo (it's listed in .gitignore as a place a key was
-// once meant to live, but the file itself was never created/committed). It has
-// been removed as part of the AI-credential security cleanup; this generator's
-// behavior is unchanged.
 
-// The `@react-native-firebase/functions` import used to live here too — the
-// client called Cloud Functions via `httpsCallable(...)`. The HTTP client
-// now lives in `services/workoutApi.js`, which calls the Vercel-deployed
-// Express server that hosts the same workout engine.
-
-/**
- * Workout Generator
- *
- * Design:
- * 1. Try ExerciseDB when available.
- * 2. Never let ExerciseDB failure stop workout generation.
- * 3. Fall back to local exercise catalog.
- * 4. Apply goal, experience and equipment rules.
- * 5. Never return a successful plan with zero exercises.
- *
- * PARTIAL MIGRATION NOTE (workout-engine backend task):
- * The actual plan-generation decisions this class used to make — goal
- * mapping, equipment filtering, injury/limitation filtering, template
- * selection, and random exercise selection — have moved server-side to the
- * `generateWorkoutPlan` Cloud Function (`functions/src/functions/
- * generateWorkoutPlan.ts` and its `constants/services/data` neighbors),
- * which fixed several real bugs this file had (goal fallback to "Build
- * Muscle" for 6 of 8 goals, the "Dumbells"/"Dumbbells" equipment mismatch,
- * "Advance" experience silently resolving to beginner, and zero
- * injury/limitation filtering at all). `generateExerciseDBWorkoutPlan()`
- * below now calls that Cloud Function instead of `this.generateWorkoutPlan()`.
- *
- * This class's own `generateWorkoutPlan()`/`validateWorkoutPlan()`/
- * `normalizeGoal()`/`getWorkoutTemplate()`/`selectExercisesForWorkout()`/
- * etc. methods are therefore DEAD CODE as of this change — nothing calls
- * them anymore. They have deliberately NOT been deleted in this pass: this
- * class is also the only source `searchExercises()`/`getExerciseCategories()`
- * (below, still exported and still used by `src/screens/MainScreens/
- * AddExercise.js`'s "browse exercises" screen) have for live ExerciseDB
- * access, and a large blind deletion inside a 2000+ line class risked
- * breaking that unrelated screen for no safety benefit. Extracting the
- * still-needed ExerciseDB-browsing methods into a small dedicated service
- * and deleting the rest of this class is a safe, low-risk follow-up — see
- * the workout-engine refactor report.
- */
-
+// ExerciseDB browsing and its local fallback are still used by AddExercise.
+// Public plan generation and weekly progression use the dedicated Vercel API.
 class ExerciseDBWorkoutGenerator {
   constructor() {
     this.baseUrl = "https://exercisedb-api.vercel.app/api/v1";
@@ -2356,7 +2310,7 @@ const workoutGenerator =
  * `services/workoutApi.js`). The server reads the user's profile
  * server-side (from `Users/{uid}`, using the authenticated uid) and does
  * every goal/equipment/injury/template/exercise-selection decision there —
- * see the class docstring above for why this no longer runs locally.
+ * The local generator is retained with the exercise browsing service.
  *
  * `userData` is accepted (and still typically passed by the caller) for
  * backward compatibility, but its contents are NOT sent to the backend and

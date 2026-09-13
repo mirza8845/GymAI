@@ -1,3 +1,5 @@
+import useDailyHydration from "../../utils/useDailyHydration";
+import { useNavigation } from "@react-navigation/native";
 import React, { useState, useMemo } from "react";
 import {
   View,
@@ -51,18 +53,20 @@ const HydrationTrackerScreen = () => {
     };
   }, [workoutPlan]);
 
-  const [intake, setIntake] = useState(0);
-  const waterTarget = parseFloat(hydrationData.targetLiters);
+  const {intake,update:setIntake,loaded,error} = useDailyHydration();
+  const navigation = useNavigation();
+  const waterTarget = Math.max(0.1, parseFloat(hydrationData.targetLiters) || 2);
 
   const addWater = (amount) => {
-    const newIntake = Math.min(intake + amount, waterTarget);
+    if (!loaded) return;
+    const newIntake = intake + amount;
     setIntake(newIntake);
     // Here you would typically update Firestore with the new intake
   };
 
   const resetIntake = () => setIntake(0);
 
-  const progress = waterTarget > 0 ? (intake / waterTarget) * 100 : 0;
+  const progress = waterTarget > 0 ? Math.min(100, (intake / waterTarget) * 100) : 0;
   const remaining = Math.max(waterTarget - intake, 0);
 
   const getHydrationStatus = () => {
@@ -166,6 +170,8 @@ const HydrationTrackerScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity accessibilityLabel="Back" onPress={() => navigation.goBack()}><Text style={{color:"white"}}>Back</Text></TouchableOpacity>
+        {error && <Text style={{color:"#ff8a80"}}>{error}</Text>}
         <Text style={styles.title}>Hydration Tracker</Text>
         <Text style={styles.subtitle}>
           Stay hydrated for optimal performance

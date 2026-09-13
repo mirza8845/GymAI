@@ -38,7 +38,7 @@ const darkColors = {
 const WorkoutDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { exercise, day, exercises, warmup, cooldown } = route.params;
+  const { exercise, day, exercises, warmup, cooldown } = route.params || {};
   const workoutPlan = useSelector((state) => state.workout.workoutPlan);
 
   /** -------- helpers ---------- */

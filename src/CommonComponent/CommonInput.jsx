@@ -5,7 +5,7 @@ import { Fonts } from "../constants/theme";
 import { RFPercentage } from "react-native-responsive-fontsize";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 
-const CommonInput = ({ img, icon, placeholder, value, onChangeText, secureTextEntry = false, handleBlur, editable = true }) => {
+const CommonInput = ({ img, icon, placeholder, value, onChangeText, secureTextEntry = false, handleBlur, editable = true, keyboardType, ...inputProps }) => {
   const { colors } = useTheme();
 
   return (
@@ -20,6 +20,11 @@ const CommonInput = ({ img, icon, placeholder, value, onChangeText, secureTextEn
         </>
       )}
       <TextInput
+        {...inputProps}
+        keyboardType={keyboardType || (placeholder?.toLowerCase().includes("email") ? "email-address" : "default")}
+        autoCapitalize={secureTextEntry || placeholder?.toLowerCase().includes("email") ? "none" : "sentences"}
+        autoCorrect={!secureTextEntry && !placeholder?.toLowerCase().includes("email")}
+        accessibilityLabel={placeholder}
         style={styles.input}
         placeholder={placeholder}
         placeholderTextColor="#555555"

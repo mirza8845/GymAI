@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { localDateKey } from "../../utils/workoutData";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -43,7 +44,7 @@ const darkColors = {
 const StartFullWorkoutScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { day, warmup = [], cooldown = [], allExercises = [] } = route.params;
+  const { day, warmup = [], cooldown = [], allExercises = [] } = route.params || {};
 
   const [currentPhase, setCurrentPhase] = useState("warmup");
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -68,6 +69,8 @@ const StartFullWorkoutScreen = () => {
   const [currentRpe, setCurrentRpe] = useState(5);
   const [currentPain, setCurrentPain] = useState(false);
 
+  const sessionId = useRef(`workout-${Date.now()}-${Math.random().toString(36).slice(2)}`).current;
+  const saveStarted = useRef(false);
   const currentExercise = allExercises[currentExerciseIndex];
   const totalExercises = allExercises.length;
   const totalSets = currentExercise?.workoutDetails?.sets || 3;
@@ -88,6 +91,7 @@ const StartFullWorkoutScreen = () => {
   }, []);
 
   const handleCompleteSet = () => {
+    if (!currentExercise || isResting || currentPhase !== "exercise") return;
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.1,
@@ -129,9 +133,9 @@ const StartFullWorkoutScreen = () => {
       setIsTimerPaused(false);
       setTimerKey(Date.now());
     } else {
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateKey();
 
-      const exerciseSets = setData[currentExercise?.id] || [];
+      const exerciseSets = [...(setData[currentExercise?.id] || []), { setNumber: currentSet, reps: repCount, weight: weightUsed, completedAt: new Date().toISOString() }];
 
       const totalReps = exerciseSets.reduce((sum, s) => sum + (s.reps || 0), 0);
 
@@ -178,6 +182,8 @@ const StartFullWorkoutScreen = () => {
         setCurrentSet(1);
         setRepCount(0);
         setWeightUsed(0);
+        setCurrentRpe(5);
+        setCurrentPain(false);
       } else {
         if (currentPhase === "warmup") {
           setCurrentPhase("exercise");
@@ -233,7 +239,8 @@ const StartFullWorkoutScreen = () => {
   };
 
   const handleSkipExercise = () => {
-    const today = new Date().toISOString().split("T")[0];
+    if (!currentExercise) return;
+    const today = localDateKey();
     const skippedExerciseData = {
       id: currentExercise.id,
       name: currentExercise.name,
@@ -286,6 +293,10 @@ const StartFullWorkoutScreen = () => {
   };
 
   const handleFinishWorkout = async () => {
+    if (saveStarted.current) return;
+    if (!userId) { Alert.alert('Sign in required','Please sign in before saving your workout.'); return; }
+    if (!completedExercisesData.length) { Alert.alert('No workout recorded','Complete or skip an exercise before saving.'); return; }
+    saveStarted.current = true;
     try {
       setIsSaving(true);
 
@@ -316,10 +327,11 @@ const StartFullWorkoutScreen = () => {
 
         // Calculate calories burned (rough estimation)
         const caloriesBurned = Math.round(totalWeightLifted * 0.05);
-        const today = new Date().toISOString().split("T")[0];
+        const today = localDateKey();
 
         // Prepare workout data for logging
         const workoutData = {
+          sessionId,
           planId: workoutPlan?.planId || null,
           planVersion: workoutPlan?.schemaVersion || 1,
           weekNumber: workoutPlan?.weekNumber || 1,
@@ -336,7 +348,7 @@ const StartFullWorkoutScreen = () => {
           totalWeight: Math.round(totalWeightLifted),
           duration,
           caloriesBurned,
-          startTime: workoutStartTime.toISOString(),
+          startTime: (workoutStartTime || new Date()).toISOString(),
           endTime: workoutEndTime.toISOString(),
           setData: setData,
           intensity: calculateWorkoutIntensity(duration, allExercises.length),
@@ -352,48 +364,13 @@ const StartFullWorkoutScreen = () => {
           workoutData,
         );
 
-        // Navigate to completion screen with success
-        navigation.navigate("WorkoutCompleted", {
-          day,
-          totalExercises: allExercises.length,
-          completedExercises: completedExercisesData,
-          warmup,
-          cooldown,
-          duration,
-          totalWeightLifted: Math.round(totalWeightLifted),
-          totalReps: totalRepsCompleted,
-          caloriesBurned,
-          savedToCloud: true,
-          workoutId: result.id,
-        });
-      } else {
-        // User not logged in
-        navigation.navigate("WorkoutCompleted", {
-          day,
-          totalExercises: allExercises.length,
-          completedExercises: completedExercisesData,
-          warmup,
-          cooldown,
-          duration: workoutStartTime
-            ? Math.round((new Date() - workoutStartTime) / 1000)
-            : 0,
-          savedToCloud: false,
-        });
+        Alert.alert('Workout saved', 'Your workout has been added to your history.', [{ text: 'Done', onPress: () => navigation.popToTop ? navigation.popToTop() : navigation.goBack() }]);
+        setCurrentPhase('completed');
       }
     } catch (error) {
-      console.error("Error saving workout:", error);
-      navigation.navigate("WorkoutCompleted", {
-        day,
-        totalExercises: allExercises.length,
-        completedExercises: completedExercisesData,
-        warmup,
-        cooldown,
-        duration: workoutStartTime
-          ? Math.round((new Date() - workoutStartTime) / 1000)
-          : 0,
-        savedToCloud: false,
-        error: error.message,
-      });
+      saveStarted.current = false;
+      console.error('Error saving workout:', error);
+      Alert.alert('Could not save workout', 'Your session is still here. Check your connection and try saving again.');
     } finally {
       setIsSaving(false);
     }

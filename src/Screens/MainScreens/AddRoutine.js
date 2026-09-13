@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import firestore from "@react-native-firebase/firestore";
 import auth from "@react-native-firebase/auth";
@@ -18,7 +18,7 @@ const AddRoutineScreen = ({ navigation }) => {
     setWeeklySplit(updatedSplit);
   };
 
-  const handleSaveRoutine = async () => {
+  const persistRoutine = async () => {
     const uid = auth().currentUser?.uid;
 
     if (!uid || !routineName.trim()) {
@@ -34,12 +34,15 @@ const AddRoutineScreen = ({ navigation }) => {
     try {
       const routineData = {
         name: routineName.trim(),
-        weekly_split: weeklySplit,
-        daily_workouts: {}, // initially empty
+        weekly_split: weeklySplit.map((label,index) => `Day ${index+1}: ${label.trim()}`),
+        planId: `manual-${Date.now()}`,
+        weekNumber: 1,
+        daily_workouts: Object.fromEntries(weeklySplit.map((_,index) => [`Day ${index+1}`,[]])),
         createdAt: firestore.FieldValue.serverTimestamp(),
       };
 
-      await firestore().collection("workouts").doc(uid).set({ plan: routineData });
+      const weekStart = new Date(); weekStart.setHours(0,0,0,0);
+      await firestore().collection("workouts").doc(uid).set({ plan: routineData, weekStart: firestore.Timestamp.fromDate(weekStart), nextPlanDue: null, source: "Manual", weekNumber: 1 });
 
       Toast.show({ type: "success", text1: "Routine created successfully!" });
       navigation.goBack();
@@ -53,6 +56,9 @@ const AddRoutineScreen = ({ navigation }) => {
     }
   };
 
+  const handleSaveRoutine = () => Alert.alert('Replace current routine?', 'This will replace your current plan. Your completed workout history will be kept.', [
+    { text: 'Cancel', style: 'cancel' }, { text: 'Create routine', onPress: persistRoutine },
+  ]);
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>

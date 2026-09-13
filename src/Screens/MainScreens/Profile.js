@@ -1,4 +1,5 @@
-import React, { useContext, useState } from "react";
+import { callDeleteAccount } from "../../services/workoutApi";
+import React, { useContext, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -29,9 +30,12 @@ const Profile = () => {
   const { userData, setUserData } = useContext(UserContext);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [password, setPassword] = useState("");
+  const deleteStarted = useRef(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const profileOptions = [
+    { icon: "history", title: "Workout history", navigateTo: "SaveRoutineDate", color: "white" },
     {
       icon: "user",
       title: "Profile",
@@ -62,161 +66,37 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem("email");
-      await AsyncStorage.removeItem("password");
+      await auth().signOut();
+      await AsyncStorage.multiRemove(['email','password','userData']);
       setUserData(null);
-      navigation.navigate("login");
-    } catch (error) {
-      console.log("Logout error:", error);
-    }
+      navigation.reset({index:0,routes:[{name:'Onboarding'}]});
+    } catch (_) { Alert.alert('Could not sign out','Please try again.'); }
   };
 
-  const deleteAllUserWorkouts = async (userId) => {
-    try {
-      // Delete all workouts for this user
-      const workoutsQuery = firestore()
-        .collection("workouts")
-        .where("userId", "==", userId);
-
-      const workoutsSnapshot = await workoutsQuery.get();
-
-      // Create batch delete operations
-      const batch = firestore().batch();
-
-      workoutsSnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      // Execute batch delete
-      await batch.commit();
-      console.log(`Deleted ${workoutsSnapshot.size} workout documents`);
-
-      return workoutsSnapshot.size;
-    } catch (error) {
-      console.error("Error deleting workouts:", error);
-      throw error;
+  const handleDeleteAccount = () => {
+    if (deleteStarted.current) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE' || !password) {
+      Alert.alert('Confirmation required','Type DELETE and enter your current password.'); return;
     }
-  };
-
-  const deleteUserFromFirestore = async (userId) => {
-    try {
-      // Delete user document from 'users' collection
-      await firestore().collection("users").doc(userId).delete();
-      console.log("User document deleted from Firestore");
-    } catch (error) {
-      console.error("Error deleting user document:", error);
-      // If user document doesn't exist, that's okay - just continue
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText.toLowerCase() !== "delete") {
-      Alert.alert(
-        "Confirmation Required",
-        "Please type 'DELETE' in all caps to confirm account deletion.",
-        [{ text: "OK" }],
-      );
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error("No user logged in");
-      }
-
-      const userId = currentUser.uid;
-      const userEmail = currentUser.email;
-
-      // Show confirmation alert
-      Alert.alert(
-        "Permanent Account Deletion",
-        "Are you sure you want to delete your account? This action:\n\n• Cannot be undone\n• Will delete all your workout data\n• Will remove all personal information\n• Will log you out immediately",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete Account",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                // 1. Delete all workout documents
-                const deletedWorkoutsCount = await deleteAllUserWorkouts(
-                  userId,
-                );
-
-                // 2. Delete user document from Firestore
-                await deleteUserFromFirestore(userId);
-
-                // 3. Delete authentication account
-                await currentUser.delete();
-
-                // 4. Clear local storage
-                await AsyncStorage.removeItem("email");
-                await AsyncStorage.removeItem("password");
-
-                // 5. Update context
-                setUserData(null);
-
-                // 6. Show success message
-                Alert.alert(
-                  "Account Deleted",
-                  `Your account and ${deletedWorkoutsCount} workouts have been permanently deleted.`,
-                  [
-                    {
-                      text: "OK",
-                      onPress: () => {
-                        setShowDeleteModal(false);
-                        navigation.navigate("login");
-                      },
-                    },
-                  ],
-                );
-              } catch (error) {
-                console.error("Error during account deletion:", error);
-
-                // Check specific error cases
-                if (error.code === "auth/requires-recent-login") {
-                  Alert.alert(
-                    "Re-authentication Required",
-                    "For security, please log in again before deleting your account.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Re-login",
-                        onPress: () => {
-                          setShowDeleteModal(false);
-                          handleLogout();
-                        },
-                      },
-                    ],
-                  );
-                } else {
-                  Alert.alert(
-                    "Deletion Failed",
-                    `Could not delete account: ${
-                      error.message || "Unknown error"
-                    }`,
-                    [{ text: "OK" }],
-                  );
-                }
-              } finally {
-                setIsDeleting(false);
-              }
-            },
-          },
-        ],
-      );
-    } catch (error) {
-      console.error("Error preparing account deletion:", error);
-      Alert.alert(
-        "Error",
-        "Failed to initiate account deletion. Please try again.",
-        [{ text: "OK" }],
-      );
-      setIsDeleting(false);
-    }
+    Alert.alert('Permanently delete account?', 'Your profile, plans, workout history and account will be removed. This cannot be undone.', [
+      {text:'Cancel',style:'cancel'},
+      {text:'Delete account',style:'destructive',onPress:async()=>{
+        if(deleteStarted.current)return;
+        deleteStarted.current=true;setIsDeleting(true);
+        try{
+          const user=auth().currentUser;
+          if(!user?.email)throw new Error('Sign in again before deleting your account.');
+          await user.reauthenticateWithCredential(auth.EmailAuthProvider.credential(user.email,password));
+          await callDeleteAccount();
+          await auth().signOut();
+          await AsyncStorage.multiRemove(['email','password','userData']);
+          setPassword('');setUserData(null);setShowDeleteModal(false);
+          navigation.reset({index:0,routes:[{name:'Onboarding'}]});
+        }catch(error){
+          Alert.alert('Account not deleted', error.code?.startsWith('auth/') ? 'Check your password and connection, then try again.' : 'Account deletion could not finish. Please retry when the service is available.');
+        }finally{deleteStarted.current=false;setIsDeleting(false);}
+      }},
+    ]);
   };
 
   const renderDeleteModal = () => (
@@ -297,6 +177,7 @@ const Profile = () => {
             </View>
           </View>
 
+          <TextInput style={styles.textInput} accessibilityLabel="Current password" placeholder="Current password" placeholderTextColor="#aaa" secureTextEntry autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} editable={!isDeleting}/>
           {/* Action Buttons */}
           <View style={styles.modalButtons}>
             <TouchableOpacity

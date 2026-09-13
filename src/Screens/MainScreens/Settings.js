@@ -140,7 +140,7 @@ const SettingsScreen = () => {
               <Ionicons name="key" size={18} color={darkColors.textSecondary} />
             }
             title="Change Password"
-            onPress={() => navigation.navigate("ChangePassword")}
+            onPress={() => navigation.navigate("ForgetPassword")}
           />
         </SettingsSection>
 
@@ -155,53 +155,7 @@ const SettingsScreen = () => {
             />
           }
         >
-          <SettingsItem
-            title="Show Workout Stats"
-            type="switch"
-            rightComponent={
-              <Switch
-                value={privacySettings.showWorkoutStats}
-                onValueChange={() => togglePrivacy("showWorkoutStats")}
-                trackColor={{
-                  false: darkColors.border,
-                  true: darkColors.primary,
-                }}
-                thumbColor="#fff"
-              />
-            }
-          />
-
-          <SettingsItem
-            title="Show Achievements"
-            type="switch"
-            rightComponent={
-              <Switch
-                value={privacySettings.showAchievements}
-                onValueChange={() => togglePrivacy("showAchievements")}
-                trackColor={{
-                  false: darkColors.border,
-                  true: darkColors.primary,
-                }}
-                thumbColor="#fff"
-              />
-            }
-          />
-
-          <SettingsItem
-            title="Data Sharing for Analytics"
-            type="switch"
-            rightComponent={
-              <Switch
-                value={privacySettings.dataSharing}
-                onValueChange={() => togglePrivacy("dataSharing")}
-                trackColor={{
-                  false: darkColors.border,
-                  true: darkColors.primary,
-                }}
-                thumbColor="#fff"
-              />
-            }
-          />
+          <Text style={{ color: darkColors.textSecondary, padding: 16 }}>Public profiles and analytics sharing are not enabled in this release.</Text>
 
           <SettingsItem
             icon={
@@ -230,8 +184,8 @@ const SettingsScreen = () => {
 
         {/* App Version */}
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>GymAi v1.0.0</Text>
-          <Text style={styles.buildText}>Build 2024.01.001</Text>
+          <Text style={styles.versionText}>GymAI v1.0</Text>
+          
         </View>
 
         <View style={{ height: 40 }} />

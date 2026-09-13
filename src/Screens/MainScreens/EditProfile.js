@@ -80,15 +80,12 @@ const EditProfile = () => {
         {
           method: "POST",
           body: formData,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
         },
       );
 
       const result = await response.json();
 
-      if (result.secure_url) {
+      if (response.ok && result.secure_url) {
         return result.secure_url;
       } else {
         throw new Error(
@@ -205,7 +202,7 @@ const EditProfile = () => {
       let profileImageUrl = userData?.profileImage || "";
 
       // Upload new image if selected and it's a local file (not already a URL)
-      if (imageUri && imageUri.startsWith("file://")) {
+      if (imageUri && /^(file|content):\/\//.test(imageUri)) {
         try {
           profileImageUrl = await uploadImageToCloudinary(imageUri);
         } catch (uploadError) {
@@ -220,7 +217,7 @@ const EditProfile = () => {
         }
       } else if (
         imageUri &&
-        !imageUri.startsWith("file://") &&
+        !/^(file|content):\/\//.test(imageUri) &&
         imageUri !== userData?.profileImage
       ) {
         // If it's already a URL but different from current one (could be from temp upload)

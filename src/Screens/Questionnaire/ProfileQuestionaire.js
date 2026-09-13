@@ -53,15 +53,12 @@ const ProfileQuestionaire = () => {
         {
           method: 'POST',
           body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
         }
       );
       
       const result = await response.json();
       
-      if (result.secure_url) {
+      if (response.ok && result.secure_url) {
         return result.secure_url; // Return the Cloudinary URL
       } else {
         throw new Error('Upload failed');
@@ -70,7 +67,7 @@ const ProfileQuestionaire = () => {
       console.error('Upload error:', error);
       throw error;
     } finally {
-      setUploading(false);
+      // The outer save owns the busy state through the profile write.
     }
   };
 
@@ -139,7 +136,7 @@ const ProfileQuestionaire = () => {
       return;
     }
 
-    if (!fullName || !nickname || !mobile) {
+    if (!fullName.trim() || !nickname.trim() || !mobile.trim()) {
       Toast.show({
         type: "info",
         text1: "Missing fields",
@@ -154,7 +151,7 @@ const ProfileQuestionaire = () => {
       let profileImageUrl = userData?.profileImage || ""; // Keep existing if no new image
       
       // Upload new image if selected
-      if (imageUri && imageUri.startsWith('file://')) {
+      if (imageUri && /^(file|content):\/\//.test(imageUri)) {
         try {
           profileImageUrl = await uploadImageToCloudinary(imageUri);
         } catch (uploadError) {
@@ -167,9 +164,9 @@ const ProfileQuestionaire = () => {
       }
 
       const updatedInfo = { 
-        fullName, 
-        nickname, 
-        mobile,
+        fullName: fullName.trim(), 
+        nickname: nickname.trim(), 
+        mobile: mobile.trim(),
         profileImage: profileImageUrl,
         updatedAt: firestore.FieldValue.serverTimestamp()
       };

@@ -20,7 +20,7 @@ import { Colors, Fonts } from "../../constants/theme";
 import { useSelector } from "react-redux";
 import auth from "@react-native-firebase/auth";
 import { WorkoutHistoryService } from "../../services/firebaseWorkoutHistory";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 const { width } = Dimensions.get("window");
 
@@ -90,9 +90,9 @@ const Workouts = () => {
     const labels = periodData.dailyData.map((item) => {
       const date = new Date(item.date);
       if (selectedPeriod === "week") {
-        return format(date, "EEE");
+        return format(date, "ddd");
       } else if (selectedPeriod === "month") {
-        return format(date, "dd");
+        return format(date, "DD");
       } else {
         return format(date, "MMM");
       }
@@ -115,44 +115,7 @@ const Workouts = () => {
   // Process muscle group data
   const processMuscleGroupData = (stats) => {
     if (!stats || !stats.muscleGroups) {
-      setMuscleGroupData([
-        {
-          name: "Chest",
-          population: 15,
-          color: "#F34E3A",
-          legendFontColor: "#fff",
-        },
-        {
-          name: "Back",
-          population: 12,
-          color: "#F17C3B",
-          legendFontColor: "#fff",
-        },
-        {
-          name: "Legs",
-          population: 18,
-          color: "#FF9F45",
-          legendFontColor: "#fff",
-        },
-        {
-          name: "Arms",
-          population: 8,
-          color: "#FFB74D",
-          legendFontColor: "#fff",
-        },
-        {
-          name: "Shoulders",
-          population: 10,
-          color: "#FFD95A",
-          legendFontColor: "#fff",
-        },
-        {
-          name: "Core",
-          population: 9,
-          color: "#E6B325",
-          legendFontColor: "#fff",
-        },
-      ]);
+      setMuscleGroupData([]);
       return;
     }
 
@@ -182,36 +145,7 @@ const Workouts = () => {
   // Process performance metrics
   const processPerformanceMetrics = (stats) => {
     if (!stats) {
-      setPerformanceMetrics([
-        {
-          icon: "fire",
-          label: "Workout Intensity",
-          value: "High",
-          color: Colors.primary,
-          trend: "↑ 12%",
-        },
-        {
-          icon: "clock",
-          label: "Avg Rest Time",
-          value: "75s",
-          color: Colors.info,
-          trend: "↓ 5s",
-        },
-        {
-          icon: "repeat",
-          label: "Consistency",
-          value: "85%",
-          color: Colors.success,
-          trend: "↑ 8%",
-        },
-        {
-          icon: "trophy",
-          label: "PRs This Month",
-          value: "3",
-          color: Colors.warning,
-          trend: "New",
-        },
-      ]);
+      setPerformanceMetrics([]);
       return;
     }
 
@@ -224,19 +158,19 @@ const Workouts = () => {
     // Determine intensity based on average duration
     let intensityValue = "Low";
     let intensityTrend = "↓";
-    if (stats.avgWorkoutDuration > 60) {
+    if (stats.avgWorkoutDuration / 60 > 60) {
       intensityValue = "Very High";
       intensityTrend = "↑↑";
-    } else if (stats.avgWorkoutDuration > 45) {
+    } else if (stats.avgWorkoutDuration / 60 > 45) {
       intensityValue = "High";
       intensityTrend = "↑";
-    } else if (stats.avgWorkoutDuration > 30) {
+    } else if (stats.avgWorkoutDuration / 60 > 30) {
       intensityValue = "Medium";
       intensityTrend = "→";
     }
 
     // Calculate average rest time (placeholder - you might want to calculate this from actual data)
-    const avgRestTime = "75s";
+    const avgRestTime = "Not recorded";
 
     // PR count (placeholder - you might want to track actual PRs)
     const prCount = stats.currentStreak >= 5 ? 1 : 0;
@@ -254,7 +188,7 @@ const Workouts = () => {
         label: "Avg Rest Time",
         value: avgRestTime,
         color: Colors.info,
-        trend: "Optimal",
+        trend: "",
       },
       {
         icon: "repeat",
@@ -332,13 +266,11 @@ const Workouts = () => {
       return { percentComplete: 0, completedDays: 0, totalDays: 0 };
 
     const dailyWorkouts = workoutPlan?.daily_workouts || {};
-    const totalDays = Object.keys(dailyWorkouts).length;
-
-    // Count completed days from history
-    const completedDays = workoutHistory.filter(
-      (workout) =>
-        workout.type === "full" && workout.day && dailyWorkouts[workout.day],
-    ).length;
+    const days = Object.keys(dailyWorkouts).filter(day => dailyWorkouts[day]?.length > 0);
+    const totalDays = days.length;
+    const completedDays = new Set(workoutHistory.filter(workout =>
+      workout.planId === workoutPlan.planId && workoutPlan.planId && workout.completionStatus === 'completed' && days.includes(workout.day)
+    ).map(workout => workout.day)).size;
 
     const percentComplete =
       totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
@@ -718,7 +650,7 @@ const Workouts = () => {
                   </Text>
                   <Text style={styles.historyDateText}>
                     {workout.date
-                      ? format(new Date(workout.date), "MMM dd, yyyy")
+                      ? format(new Date(workout.date), "MMM DD, YYYY")
                       : ""}
                   </Text>
                 </View>

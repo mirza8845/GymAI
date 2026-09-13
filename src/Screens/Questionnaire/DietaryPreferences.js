@@ -30,11 +30,9 @@ const DietaryPreferences = () => {
   }, [userData]);
 
   const toggleSelection = (item, selectedList, setSelectedList) => {
-    if (selectedList.includes(item)) {
-      setSelectedList(selectedList.filter((i) => i !== item));
-    } else {
-      setSelectedList([...selectedList, item]);
-    }
+    const none = item === 'No preferences' || item === 'No allergies';
+    if (selectedList.includes(item)) setSelectedList(selectedList.filter(value => value !== item));
+    else setSelectedList(none ? [item] : [...selectedList.filter(value => !['No preferences','No allergies'].includes(value)), item]);
   };
 
   const handleContinue = async () => {

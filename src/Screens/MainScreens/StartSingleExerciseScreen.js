@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { localDateKey } from "../../utils/workoutData";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -41,8 +42,8 @@ const darkColors = {
 const StartSingleExerciseScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { exercise, warmup, cooldown, day, exerciseIndex, totalExercises,
-    planId, planVersion, weekNumber } = route.params;
+  const { exercise = {}, warmup = [], cooldown = [], day, exerciseIndex, totalExercises,
+    planId, planVersion, weekNumber } = route.params || {};
 
   const [currentSet, setCurrentSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
@@ -57,6 +58,8 @@ const StartSingleExerciseScreen = () => {
   const [weightUsed, setWeightUsed] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
+  const sessionId = useRef(`exercise-${Date.now()}-${Math.random().toString(36).slice(2)}`).current;
+  const saveStarted = useRef(false);
   const totalSets = exercise?.workoutDetails?.sets || 3;
   const restTime = exercise?.workoutDetails?.restSeconds || 60;
   const targetReps = exercise?.workoutDetails?.reps || "8-12";
@@ -75,6 +78,7 @@ const StartSingleExerciseScreen = () => {
   }, []);
 
   const handleCompleteSet = () => {
+    if (isResting || isCompleted || !exercise.id) return;
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.1,
@@ -122,6 +126,9 @@ const StartSingleExerciseScreen = () => {
   };
 
   const handleFinishWorkout = async () => {
+    if (saveStarted.current) return;
+    if (!userId || !setData.length) { Alert.alert('Unable to save','Sign in and complete a set before saving.'); return; }
+    saveStarted.current = true;
     try {
       setIsSaving(true);
 
@@ -148,9 +155,10 @@ const StartSingleExerciseScreen = () => {
       const avgWeight =
         setData.length > 0 ? Math.round(totalWeightUsed / setData.length) : 0;
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateKey();
 
       const exerciseData = {
+        sessionId,
         id: exercise?.id,
         name: exercise?.name,
         target: exercise?.target,
@@ -204,6 +212,7 @@ const StartSingleExerciseScreen = () => {
         ],
       );
     } catch (error) {
+      saveStarted.current = false;
       console.error("Error saving exercise:", error);
       Alert.alert("Error", "Failed to save exercise. Please try again.", [
         { text: "OK" },

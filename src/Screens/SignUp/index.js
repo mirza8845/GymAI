@@ -12,7 +12,7 @@ import * as yup from "yup";
 import { Formik } from "formik";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Col } from "react-native-table-component";
+
 
 const SignUp = () => {
   const { colors } = useTheme();
@@ -20,8 +20,8 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
 
   let validationSchema = yup.object({
-    name: yup.string().required("Username is required"),
-    email: yup.string().email("Invalid email").required("Email is required"),
+    name: yup.string().trim().required("Username is required"),
+    email: yup.string().trim().email("Invalid email").required("Email is required"),
     password: yup.string().min(6, "Password must be at least 6 characters long").required("Password is required"),
   });
 
@@ -29,12 +29,12 @@ const SignUp = () => {
     if (values.name && values.email && values.password) {
       setLoading(true);
       try {
-        const userCredential = await auth().createUserWithEmailAndPassword(values.email, values.password);
+        const userCredential = await auth().createUserWithEmailAndPassword(values.email.trim().toLowerCase(), values.password);
         const user = userCredential.user;
 
         const userData = {
           name: values.name,
-          email: values.email,
+          email: values.email.trim().toLowerCase(),
           uid: user.uid,
           profile: null,
           createdAt: firestore.FieldValue.serverTimestamp(),
@@ -42,14 +42,14 @@ const SignUp = () => {
 
         await firestore().collection("Users").doc(user.uid).set(userData);
         await AsyncStorage.setItem("email", values.email);
-        await AsyncStorage.setItem("password", values.password);
+        await AsyncStorage.removeItem("password");
 
         Toast.show({
           type: "success",
           text1: "Sign Up",
           text2: "User registered successfully",
         });
-        navigation.navigate("introQuestionnaire");
+        navigation.reset({ index: 0, routes: [{ name: "Decider" }] });
       } catch (error) {
         Toast.show({
           type: "error",

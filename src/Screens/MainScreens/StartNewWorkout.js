@@ -39,8 +39,8 @@ const StartWorkoutScreen = ({ navigation }) => {
       return;
     }
 
-    if (exercises.length === 0) {
-      Toast.show({ type: "error", text1: "Add workout", text2: "Add at least one exercise" });
+    if (exercises.length === 0 || exercises.some(ex => !ex.name.trim() || !/^\d+$/.test(ex.sets) || Number(ex.sets)<1 || !ex.reps.trim() || (ex.weight.trim() && (!Number.isFinite(Number(ex.weight)) || Number(ex.weight)<0)))) {
+      Toast.show({ type: "error", text1: "Add workout", text2: "Enter an exercise name, positive sets, reps and a valid weight." });
       return;
     }
 

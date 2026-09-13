@@ -2149,11 +2149,6 @@
   resolved "https://registry.npmjs.org/@react-native-firebase/firestore/-/firestore-22.2.1.tgz"
   integrity sha512-QM5r9QN45Adn/N2BkbuQNlTiTwWlHsILIrL73psOyyyAihtQpig4bAJKVhNJdUthmR0PapI/xHG9+/1D1d6Czg==
 
-"@react-native-firebase/functions@^22.2.1":
-  version "22.2.1"
-  resolved "https://registry.npmjs.org/@react-native-firebase/functions/-/functions-22.2.1.tgz"
-  integrity sha512-qUKGT56MAaExLcuxmLu6kRzbH0773TLfRlfxYgWjrdkqQN/HLVsRW1ThWOGizxhdpXB6e0iFfj9e2GXD4kFfSw==
-
 "@react-native/assets-registry@0.79.0":
   version "0.79.0"
   resolved "https://registry.npmjs.org/@react-native/assets-registry/-/assets-registry-0.79.0.tgz"
@@ -4101,11 +4096,6 @@ dot-case@^3.0.4:
   dependencies:
     no-case "^3.0.4"
     tslib "^2.0.3"
-
-dotenv@^16.4.5:
-  version "16.6.1"
-  resolved "https://registry.npmjs.org/dotenv/-/dotenv-16.6.1.tgz"
-  integrity sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==
 
 dunder-proto@^1.0.0, dunder-proto@^1.0.1:
   version "1.0.1"
@@ -7651,13 +7641,6 @@ react-native-countdown-component@^2.7.1:
     lodash "^4.17.13"
     prop-types "^15.5.8"
     sprintf-js "^1.1.1"
-
-react-native-dotenv@^3.4.11:
-  version "3.4.11"
-  resolved "https://registry.npmjs.org/react-native-dotenv/-/react-native-dotenv-3.4.11.tgz"
-  integrity sha512-6vnIE+WHABSeHCaYP6l3O1BOEhWxKH6nHAdV7n/wKn/sciZ64zPPp2NUdEUf1m7g4uuzlLbjgr+6uDt89q2DOg==
-  dependencies:
-    dotenv "^16.4.5"
 
 react-native-dropdown-picker@^5.4.6:
   version "5.4.6"

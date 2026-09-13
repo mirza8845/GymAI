@@ -1,97 +1,13 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import Heading from '../../CommonComponent/Heading'
-import Workout from './Workout'
-import WorkoutCard from '../../CommonComponent/WorkoutCard'
-// import CalendarPicker from "react-native-calendar-picker";
-
-
-const SaveRoutineDate = () => {
-    const [selectedDate, setSelectedDate] = useState(null);
-
-    return (
-        <SafeAreaView>
-            <ScrollView style={{ paddingHorizontal: 30, paddingVertical: 50 }} >
-                <View style={{ alignSelf: 'flex-start' }}>
-                    <Heading title={'Previous Workouts'} />
-                </View>
-                <WorkoutCard
-                    title={'Pull'}
-                    description={'Pullups, face pull, Seated Row...'}
-                    time={'45 Mins'} />
-                <WorkoutCard
-                    title={'Legs'}
-                    description={'Barbell squat, Seated leg curl...'}
-                    time={'51 Mins'} />
-                <TouchableOpacity style={styles.seeMoreBtn}>
-                    <Text style={styles.seeMoreBtnText}>See More</Text>
-                </TouchableOpacity>
-                <Text style={{ color: 'white', fontSize: 20 }}>Calendar</Text>
-                {/* <CalendarPicker
-                    selectedStartDate={selectedDate}
-                    onDateChange={(date) => setSelectedDate(date)}
-                    allowRangeSelection={false}
-                    previousTitle=""
-                    nextTitle=""
-                    selectedDayTextColor="red"
-                    selectedDayColor="black"
-                    scaleFactor={400}
-                    todayTextStyle={{ fontWeight: 'bold' }}
-                    textStyle={{ color: 'white' }}
-                    customDayHeaderStyles={() => ({ style: { backgroundColor: 'black' } })}
-                    customDayStyles={() => ({ style: { backgroundColor: 'white' } })}
-                    customStyles={{
-                        calendarBackground: 'black',
-                    }}
-                    initialDate={null}
-                /> */}
-                  <TouchableOpacity style={styles.btnContainer}>
-                    <Text style={styles.btnText}>Monthly Report</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.btnContainer}>
-                    <Text style={styles.btnText}>Analytics</Text>
-                </TouchableOpacity>
-
-            </ScrollView>
-        </SafeAreaView>
-    )
+import React,{useCallback,useState} from 'react';
+import {Text,ScrollView,TouchableOpacity,ActivityIndicator} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
+import auth from '@react-native-firebase/auth';
+import Button from '../../CommonComponent/Button';
+import {WorkoutHistoryService} from '../../services/firebaseWorkoutHistory';
+export default function SaveRoutineDate({navigation}) {
+  const [items,setItems]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(null);
+  const load=useCallback(async()=>{setLoading(true);setError(null);try{const uid=auth().currentUser?.uid;if(!uid)throw new Error('Please sign in.');const result=await WorkoutHistoryService.getUserWorkoutHistory(uid,100);setItems(result.workouts);}catch(err){setError('Could not load workout history. Please try again.');}finally{setLoading(false);}},[]);
+  useFocusEffect(useCallback(()=>{load();},[load]));
+  return <SafeAreaView style={{flex:1,backgroundColor:'#141516'}}><ScrollView contentContainerStyle={{padding:24,gap:16}}><Button title="Back" onPress={()=>navigation.goBack()}/><Text style={{color:'white',fontSize:24}}>Workout history</Text>{loading ? <ActivityIndicator/> : error ? <><Text style={{color:'white'}}>{error}</Text><Button title="Try again" onPress={load}/></> : items.length ? items.map(item=><TouchableOpacity key={item.id} accessibilityRole="button" onPress={()=>navigation.navigate('ExerciseForm',{workoutId:item.id,notes:item.notes||'',title:item.day||'Workout'})} style={{padding:20,backgroundColor:'#222',borderRadius:12}}><Text style={{color:'white'}}>{item.day || 'Workout'} • {item.date}</Text><Text style={{color:'#aaa'}}>{item.notes || 'Tap to add notes'}</Text></TouchableOpacity>) : <Text style={{color:'white'}}>No completed workouts yet.</Text>}<Button title="Analytics" onPress={()=>navigation.navigate('Tabs',{screen:'Statics'})}/></ScrollView></SafeAreaView>;
 }
-
-export default SaveRoutineDate
-
-const styles = StyleSheet.create({
-    seeMoreBtn: {
-        width: '35%',
-        height: 33,
-        borderRadius: 20,
-        backgroundColor: '#ffff',
-        borderWidth: 1,
-        textAlign: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        alignSelf: 'flex-end'
-    },
-    seeMoreBtnText: {
-        fontSize: 19,
-        color: 'black',
-        fontWeight: '500',
-    },
-    btnContainer:{
-        width: '80%',
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#ffff',
-        borderWidth: 1,
-        textAlign: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        alignSelf: 'flex-start',
-        textAlign:'center'
-    },
-    btnText:{
-        fontSize: 19,
-        color: 'black',
-        fontWeight: '500',
-    }
-})

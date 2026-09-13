@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import React from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import MainNavigator from "./screens/Navigation/MainNavigation";
 import Toast from "react-native-toast-message";
@@ -21,14 +22,14 @@ const App = () => {
   };
 
   return (
-    <Provider store={store}>
+    <SafeAreaProvider><Provider store={store}>
       <UserProvider>
         <NavigationContainer theme={darkTheme}>
           <MainNavigator />
           <Toast config={toastConfig} />
         </NavigationContainer>
       </UserProvider>
-    </Provider>
+    </Provider></SafeAreaProvider>
   );
 };
 
